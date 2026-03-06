@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Scraper</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #f5f5f0;
+            color: #222;
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        p.sub {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+        }
+
+        form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+
+        form input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ccc;
+            font-family: monospace;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        form input:focus {
+            border-color: #222;
+        }
+
+        form button {
+            background: #222;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-family: monospace;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        form button:hover {
+            background: #444;
+        }
+
+        .result-header {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        .email-item {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .email-item span {
+            font-size: 0.95rem;
+        }
+
+        .email-item a {
+            color: #555;
+            font-size: 0.8rem;
+            text-decoration: none;
+        }
+
+        .email-item a:hover {
+            text-decoration: underline;
+        }
+
+        .no-emails {
+            color: #aaa;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>📧 email scraper</h1>
+    <p class="sub">enter a website url and we'll pull out any emails we find</p>
+
+    <form method="POST">
+        <input type="text" name="url" placeholder="https://example.com/contact" value="{{ url }}" required>
+        <button type="submit">scrape</button>
+    </form>
+
+    {% if url %}
+        {% if emails %}
+            <p class="result-header">found {{ emails|length }} email(s) on <strong>{{ url }}</strong></p>
+            {% for e in emails %}
+            <div class="email-item">
+                <span>{{ e }}</span>
+                <a href="mailto:{{ e }}">send mail →</a>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="no-emails">no emails found on that page.</p>
+        {% endif %}
+    {% endif %}
+
+</body>
+</html>
