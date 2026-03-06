@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hand Gesture Detector</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+    }
+    h1 { font-size: 2.2em; color: #00e5ff; margin-bottom: 6px; letter-spacing: 2px; }
+    p.sub { color: #666; margin-bottom: 30px; font-size: 0.95em; }
+    .tabs { display: flex; gap: 12px; margin-bottom: 30px; }
+    .tab {
+      padding: 12px 35px;
+      border-radius: 50px;
+      border: 1px solid #333;
+      background: #111;
+      color: #888;
+      cursor: pointer;
+      font-size: 1em;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      background: linear-gradient(135deg, #00e5ff, #7b2ff7);
+      color: #fff;
+      border-color: transparent;
+    }
+    .panel { display: none; width: 100%; max-width: 680px; }
+    .panel.active { display: block; }
+    .webcam-controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .btn {
+      padding: 10px 24px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: bold;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-start  { background: #00e5ff; color: #000; }
+    .btn-stop   { background: #ff4444; color: #fff; }
+    .btn-upload { background: #7b2ff7; color: #fff; }
+    .display-box {
+      width: 100%;
+      background: #111;
+      border: 2px solid #1a1a1a;
+      border-radius: 14px;
+      overflow: hidden;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .display-box img { width: 100%; border-radius: 12px; display: block; }
+    .gesture-badge {
+      margin-top: 16px;
+      padding: 12px 24px;
+      border-radius: 50px;
+      background: #111;
+      border: 1px solid #00e5ff33;
+      font-size: 1.4em;
+      color: #00e5ff;
+      text-align: center;
+      min-height: 52px;
+    }
+    .fingers-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      justify-content: center;
+    }
+    .chip {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+    .chip.up   { background: #76ff0322; color: #76ff03; border: 1px solid #76ff0355; }
+    .chip.down { background: #ff444422; color: #ff4444; border: 1px solid #ff444455; }
+    .upload-area {
+      border: 2px dashed #333;
+      border-radius: 14px;
+      padding: 40px;
+      text-align: center;
+      background: #111;
+      margin-bottom: 16px;
+      color: #666;
+    }
+    .upload-area input { display: none; }
+    .upload-area label { cursor: pointer; color: #00e5ff; font-size: 1em; }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #1a1a1a;
+      border-radius: 3px;
+      margin: 10px 0;
+      display: none;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00e5ff, #7b2ff7);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.1s;
+    }
+    .status-text { color: #888; font-size: 0.9em; margin-top: 8px; min-height: 20px; }
+    .mute-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #111;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <h1>🖐 Hand Gesture Detector</h1>
+  <p class="sub">Real-time gesture recognition with sound feedback</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('webcam')">📷 Webcam</button>
+    <button class="tab"        onclick="switchTab('upload')">🎬 Upload Video</button>
+  </div>
+
+  <div class="panel active" id="panel-webcam">
+    <div class="webcam-controls">
+      <button class="btn btn-start" onclick="startWebcam()">▶ Start Webcam</button>
+      <button class="btn btn-stop"  onclick="stopWebcam()">⏹ Stop</button>
+    </div>
+    <div class="display-box">
+      <img id="webcam-img" src="" alt="" style="display:none;">
+      <span id="webcam-placeholder" style="color:#333;">Press Start to begin</span>
+    </div>
+    <div class="gesture-badge" id="webcam-gesture">—</div>
+    <div class="fingers-row"   id="webcam-fingers"></div>
+    <div class="status-text"   id="webcam-status"></div>
+  </div>
+
+  <div class="panel" id="panel-upload">
+    <div class="upload-area">
+      <input type="file" id="video-file" accept="video/*">
+      <label for="video-file">📁 Click to select a video file</label>
+      <p id="file-name" style="margin-top:10px; color:#aaa; font-size:0.85em;"></p>
+    </div>
+    <button class="btn btn-upload" onclick="processVideo()" style="width:100%; margin-bottom:16px;">
+      🔍 Process Video
+    </button>
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="display-box">
+      <img id="upload-img" src="" alt="" style="display:none;">
+      <span id="upload-placeholder" style="color:#333;">Upload a video to begin</span>
+    </div>
+    <div class="gesture-badge" id="upload-gesture">—</div>
+    <div class="fingers-row"   id="upload-fingers"></div>
+    <div class="status-text"   id="upload-status"></div>
+  </div>
+
+  <button class="mute-btn" onclick="toggleMute()" id="mute-btn">🔊</button>
+
+<script>
+  let muted = false;
+
+  const gestureSounds = {
+    "Fist":           new Audio('/static/sounds/Fist.mpeg'),
+    "Pointing / One": new Audio('/static/sounds/openhand.mpeg'),
+    "Middle":         new Audio('/static/sounds/Middle.mpeg'),
+    "Spiderman":      new Audio('/static/sounds/index-pinky-thumb.mpeg'),
+    "Call Me":        new Audio('/static/sounds/thumb-pinky.mpeg'),
+  };
+
+  // Set all sounds to loop so they play continuously while gesture is held
+  Object.values(gestureSounds).forEach(audio => {
+    audio.loop   = true;
+    audio.volume = 0.8;
+  });
+
+  let currentAudio = null;   // the audio currently playing
+  let currentGesture = null; // the gesture currently active
+
+  function playSound(gesture) {
+    if (muted) return;
+
+    // Same gesture still held — do nothing, let it keep looping
+    if (gesture === currentGesture) return;
+
+    // Gesture changed — stop the old sound
+    stopCurrentSound();
+
+    // Start new sound if this gesture has one
+    const audio = gestureSounds[gesture];
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+      currentAudio   = audio;
+      currentGesture = gesture;
+    } else {
+      // No sound for this gesture (e.g. "No Hand Detected")
+      currentAudio   = null;
+      currentGesture = gesture;
+    }
+  }
+
+  function stopCurrentSound() {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      currentAudio   = null;
+      currentGesture = null;
+    }
+  }
+
+  function toggleMute() {
+    muted = !muted;
+    document.getElementById('mute-btn').innerText = muted ? '🔇' : '🔊';
+    if (muted) stopCurrentSound();
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['webcam','upload'][i] === tab);
+    });
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    if (tab !== 'webcam') stopWebcam();
+  }
+
+  let webcamRunning = false;
+
+  async function startWebcam() {
+    if (webcamRunning) return;
+    webcamRunning = true;
+    document.getElementById('webcam-placeholder').style.display = 'none';
+    document.getElementById('webcam-status').innerText = 'Webcam running...';
+    const img = document.getElementById('webcam-img');
+    img.style.display = 'block';
+    img.src = '/webcam_feed?' + Date.now();
+    pollGesture();
+  }
+
+  async function pollGesture() {
+    while (webcamRunning) {
+      try {
+        const res     = await fetch('/gesture_status');
+        const data    = await res.json();
+        const gesture = data.gesture;
+        document.getElementById('webcam-gesture').innerText = gesture;
+        playSound(gesture);
+      } catch(e) {}
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
+
+  async function stopWebcam() {
+    webcamRunning = false;
+    stopCurrentSound();
+    await fetch('/stop_webcam');
+    const img = document.getElementById('webcam-img');
+    img.src = '';
+    img.style.display = 'none';
+    document.getElementById('webcam-placeholder').style.display = 'block';
+    document.getElementById('webcam-gesture').innerText = '—';
+    document.getElementById('webcam-fingers').innerHTML = '';
+    document.getElementById('webcam-status').innerText  = '';
+  }
+
+  document.getElementById('video-file').addEventListener('change', function() {
+    const name = this.files[0]?.name || '';
+    document.getElementById('file-name').innerText = name ? `Selected: ${name}` : '';
+  });
+
+  async function processVideo() {
+    const fileInput = document.getElementById('video-file');
+    if (!fileInput.files.length) { alert('Please select a video file first.'); return; }
+
+    const formData = new FormData();
+    formData.append('video', fileInput.files[0]);
+
+    document.getElementById('upload-status').innerText = '⏳ Uploading & processing...';
+    document.getElementById('progress-bar').style.display = 'block';
+    document.getElementById('progress-fill').style.width  = '10%';
+    document.getElementById('upload-placeholder').style.display = 'none';
+
+    const res  = await fetch('/upload_video', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    document.getElementById('progress-fill').style.width = '100%';
+    document.getElementById('upload-status').innerText = `✅ Done — ${data.frames.length} frames processed`;
+
+    const imgEl = document.getElementById('upload-img');
+    imgEl.style.display = 'block';
+
+    for (let i = 0; i < data.frames.length; i++) {
+      imgEl.src = 'data:image/jpeg;base64,' + data.frames[i];
+      const gesture = data.gestures[i];
+      document.getElementById('upload-gesture').innerText = gesture;
+      playSound(gesture);
+      const pct = Math.round((i / data.frames.length) * 100);
+      document.getElementById('progress-fill').style.width = pct + '%';
+      await new Promise(r => setTimeout(r, 66));
+    }
+
+    stopCurrentSound();
+    document.getElementById('upload-status').innerText = '✅ Playback complete';
+  }
+</script>
+</body>
+</html>

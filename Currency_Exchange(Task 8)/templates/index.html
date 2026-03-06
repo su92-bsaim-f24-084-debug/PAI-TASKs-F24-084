@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FX Convert</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0c0c0e;
+      --surface: #131316;
+      --border: #222228;
+      --gold: #c9a84c;
+      --gold-dim: #8a6e2f;
+      --text: #e8e6e0;
+      --muted: #6b6860;
+      --success-bg: #0e1a10;
+      --success-border: #2a5c30;
+      --error-bg: #1a0e0e;
+      --error-border: #5c2a2a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.07) 0%, transparent 60%);
+    }
+
+    .card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2.5rem;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(201,168,76,0.04);
+      animation: fadeUp 0.5s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2.2rem;
+    }
+
+    .header .logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 300;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    .header .tagline {
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-top: 0.3rem;
+    }
+
+    .divider {
+      width: 40px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+      margin: 1rem auto;
+    }
+
+    label {
+      display: block;
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    input[type="number"],
+    select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.95rem;
+      padding: 0.75rem 1rem;
+      border-radius: 3px;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--gold-dim);
+    }
+
+    input[type="number"]::placeholder { color: var(--muted); }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: end;
+      margin: 1.2rem 0;
+    }
+
+    .swap-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--gold-dim);
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: border-color 0.2s, color 0.2s, transform 0.2s;
+      flex-shrink: 0;
+      margin-bottom: 1px;
+    }
+    .swap-btn:hover { border-color: var(--gold); color: var(--gold); transform: rotate(180deg); }
+
+    .field { margin-bottom: 1.2rem; }
+
+    .select-wrapper { position: relative; }
+    .select-wrapper::after {
+      content: "▾";
+      position: absolute;
+      right: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gold-dim);
+      pointer-events: none;
+      font-size: 0.75rem;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      background: linear-gradient(135deg, #b8922a, #c9a84c);
+      color: #0c0a04;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      font-weight: 400;
+      border: none;
+      padding: 0.9rem;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    button[type="submit"]:hover { opacity: 0.9; }
+    button[type="submit"]:active { transform: scale(0.99); }
+
+    .result {
+      margin-top: 1.8rem;
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      border-radius: 3px;
+      padding: 1.4rem 1.6rem;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .result .result-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+
+    .result .result-main {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.4rem;
+      font-weight: 300;
+      color: #a8e6a3;
+      line-height: 1;
+    }
+
+    .result .result-main span {
+      font-size: 1rem;
+      color: var(--muted);
+      margin-right: 0.3rem;
+    }
+
+    .result .result-meta {
+      margin-top: 0.8rem;
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    .error {
+      margin-top: 1.5rem;
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      border-radius: 3px;
+      padding: 1rem 1.2rem;
+      font-size: 0.75rem;
+      color: #e8a0a0;
+      letter-spacing: 0.05em;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .footer {
+      margin-top: 2.5rem;
+      font-size: 0.58rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .footer a { color: var(--gold-dim); text-decoration: none; }
+    .footer a:hover { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="logo">FX Convert</div>
+    <div class="tagline">Live Currency Exchange</div>
+    <div class="divider"></div>
+  </div>
+
+  <form method="POST" id="converterForm">
+
+    <div class="field">
+      <label>Amount</label>
+      <input
+        type="number"
+        name="amount"
+        id="amount"
+        placeholder="0.00"
+        min="0"
+        step="any"
+        value="{{ amount }}"
+        required
+      />
+    </div>
+
+    <div class="row">
+      <div>
+        <label>From</label>
+        <div class="select-wrapper">
+          <select name="from_currency" id="from_currency">
+            {% for code, name in currencies %}
+              <option value="{{ code }}" {% if code == from_currency %}selected{% endif %}>
+                {{ code }} — {{ name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <button type="button" class="swap-btn" onclick="swapCurrencies()" title="Swap">⇄</button>
+
+      <div>
+        <label>To</label>
+        <div class="select-wrapper">
+          <select name="to_currency" id="to_currency">
+            {% for code, name in currencies %}
+              <option value="{{ code }}" {% if code == to_currency %}selected{% endif %}>
+                {{ code }} — {{ name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit">Convert</button>
+  </form>
+
+  {% if result %}
+  <div class="result">
+    <div class="result-label">Converted Amount</div>
+    <div class="result-main">
+      <span>{{ result.to }}</span>{{ "{:,.2f}".format(result.converted) }}
+    </div>
+    <div class="result-meta">
+      {{ result.amount }} {{ result.from }} &nbsp;·&nbsp;
+      1 {{ result.from }} = {{ result.rate }} {{ result.to }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div class="error">⚠ {{ error }}</div>
+  {% endif %}
+</div>
+
+<div class="footer">
+  Powered by <a href="https://www.exchangerate-api.com/" target="_blank">ExchangeRate-API</a>
+  &nbsp;·&nbsp; Get your free key to activate
+</div>
+
+<script>
+  function swapCurrencies() {
+    const from = document.getElementById('from_currency');
+    const to   = document.getElementById('to_currency');
+    const temp = from.value;
+    from.value = to.value;
+    to.value = temp;
+  }
+</script>
+
+</body>
+</html>
