@@ -25,9 +25,9 @@ app = Flask(__name__)
 # ──────────────────────────────────────────────
 
 # Paths — adjust if your files live elsewhere
-SUMMARY_PATH      = "summary.txt"
-CHUNKS_CSV_PATH   = "lecture_chunks.csv"
-FAISS_INDEX_PATH  = "lecture_index.index"
+SUMMARY_PATH      = "D:\\PAI TASKS\\Project(Task 13)\\summary.txt"
+CHUNKS_CSV_PATH   = "D:\\PAI TASKS\\Project(Task 13)\\lecture_chunks.csv"
+FAISS_INDEX_PATH  = "D:\\PAI TASKS\\Project(Task 13)\\lecture_index.index"
 
 print("[INIT] Loading lecture assets...")
 
