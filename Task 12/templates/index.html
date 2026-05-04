@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture QnA Bot</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background-color: #f9f9f9; }
+        .search-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input[type="text"] { width: 70%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; font-size: 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #218838; }
+        .result-card { background: white; padding: 15px; margin-top: 15px; border-left: 4px solid #007bff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .distance { color: #666; font-size: 0.9em; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="search-box">
+        <h2>📚 Lecture Chunks QnA Bot</h2>
+        <form method="POST">
+            <input type="text" name="query" placeholder="Ask a question from the lectures..." value="{{ query }}" required>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    {% if results %}
+        <h3>Top Matches:</h3>
+        {% for result in results %}
+            <div class="result-card">
+                <div class="distance">Distance Score: {{ result.distance }}</div>
+                <div>{{ result.text }}</div>
+            </div>
+        {% endfor %}
+    {% elif query %}
+        <p>No results found.</p>
+    {% endif %}
+
+</body>
+</html>

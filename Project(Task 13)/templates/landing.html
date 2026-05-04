@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LectureAI · Analyze Any YouTube Lecture</title>
+  <meta name="description" content="Paste a YouTube lecture URL and instantly chat with an AI that understands every word — powered by FLAN-T5 and RAG."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet"/>
+
+  <style>
+    /* ─── Design Tokens ──────────────────────────────── */
+    :root {
+      --bg:        #07090f;
+      --surface:   #0f1219;
+      --surface2:  #161c28;
+      --border:    #1e2638;
+      --accent:    #4af0a8;
+      --accent2:   #6c7fff;
+      --accent3:   #f06aff;
+      --text:      #e4eaf7;
+      --text-dim:  #5a6a8a;
+      --radius:    16px;
+      --font-d:    'Syne', sans-serif;
+      --font-m:    'DM Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-m);
+      font-size: 14px;
+      line-height: 1.65;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ─── Animated mesh background ─────────────────── */
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .bg-mesh::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      opacity: 0.14;
+    }
+
+    /* Glowing orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.18;
+      animation: drift 12s ease-in-out infinite alternate;
+    }
+    .orb1 { width: 600px; height: 600px; background: var(--accent2); top: -200px; left: -200px; animation-delay: 0s; }
+    .orb2 { width: 500px; height: 500px; background: var(--accent); bottom: -150px; right: -100px; animation-delay: -4s; }
+    .orb3 { width: 400px; height: 400px; background: var(--accent3); top: 30%; left: 50%; animation-delay: -8s; }
+
+    @keyframes drift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(40px, 30px) scale(1.08); }
+    }
+
+    /* ─── Main Container ────────────────────────────── */
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 660px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      animation: riseIn 0.7s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(40px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Badge ─────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(74, 240, 168, 0.08);
+      border: 1px solid rgba(74, 240, 168, 0.25);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-family: var(--font-d);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 28px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ─── Hero Text ─────────────────────────────────── */
+    h1 {
+      font-family: var(--font-d);
+      font-size: clamp(36px, 6vw, 56px);
+      font-weight: 800;
+      line-height: 1.1;
+      text-align: center;
+      color: var(--text);
+      margin-bottom: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    h1 .grad {
+      background: linear-gradient(135deg, var(--accent2) 0%, var(--accent) 60%, var(--accent3) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-family: var(--font-m);
+      font-size: 15px;
+      color: var(--text-dim);
+      text-align: center;
+      max-width: 480px;
+      line-height: 1.75;
+      margin-bottom: 44px;
+    }
+
+    /* ─── Card ──────────────────────────────────────── */
+    .card {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px 36px 30px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* shimmer accent line */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent2), var(--accent), transparent);
+      opacity: 0.7;
+    }
+
+    /* ─── URL Input Group ───────────────────────────── */
+    .field-label {
+      font-family: var(--font-d);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .field-label span { color: var(--accent2); }
+
+    .url-wrap {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 6px 6px 16px;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .url-wrap:focus-within {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 4px rgba(108,127,255,0.12);
+    }
+
+    .yt-icon {
+      display: flex;
+      align-items: center;
+      color: #ff4747;
+      font-size: 20px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    #yt-url {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--font-m);
+      font-size: 14px;
+      padding: 10px 0;
+      min-width: 0;
+    }
+
+    #yt-url::placeholder { color: var(--text-dim); }
+
+    #analyze-btn {
+      flex-shrink: 0;
+      padding: 0 22px;
+      height: 46px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent2) 0%, var(--accent) 100%);
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-d);
+      font-size: 13px;
+      font-weight: 700;
+      color: #07090f;
+      letter-spacing: 0.04em;
+      transition: transform 0.15s, box-shadow 0.2s, opacity 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    #analyze-btn:hover {
+      transform: scale(1.03);
+      box-shadow: 0 6px 24px rgba(108,127,255,0.35);
+    }
+
+    #analyze-btn:active { transform: scale(0.97); }
+    #analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    #analyze-btn .btn-arrow { font-size: 16px; transition: transform 0.2s; }
+    #analyze-btn:hover .btn-arrow { transform: translateX(3px); }
+
+    /* ─── Error message ─────────────────────────────── */
+    #error-msg {
+      display: none;
+      margin-top: 12px;
+      font-size: 12.5px;
+      color: #ff6b6b;
+      padding: 8px 14px;
+      background: rgba(255,107,107,0.08);
+      border: 1px solid rgba(255,107,107,0.2);
+      border-radius: 8px;
+    }
+
+    /* ─── Loading state ─────────────────────────────── */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(7,9,15,0.3);
+      border-top-color: #07090f;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Divider ───────────────────────────────────── */
+    .divider {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 26px 0 20px;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider span {
+      font-size: 11px;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    /* ─── Sample chips ──────────────────────────────── */
+    .samples-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      font-family: var(--font-d);
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .sample-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chip:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+      background: rgba(108,127,255,0.08);
+      transform: translateY(-1px);
+    }
+
+    .chip-icon { font-size: 14px; }
+
+    /* ─── Footer strip ──────────────────────────────── */
+    .footer-strip {
+      margin-top: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .feature-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .feature-pill .icon { font-size: 15px; }
+
+    /* ─── Responsive ────────────────────────────────── */
+    @media (max-width: 500px) {
+      .card { padding: 24px 20px 22px; }
+      .url-wrap { flex-direction: column; }
+      #analyze-btn { height: 44px; width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient background -->
+  <div class="bg-mesh">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+  </div>
+
+  <div class="container">
+
+    <!-- Badge -->
+    <div class="badge">
+      <span class="badge-dot"></span>
+      RAG · FLAN-T5 · FAISS
+    </div>
+
+    <!-- Hero -->
+    <h1>Chat with any<br/><span class="grad">YouTube Lecture</span></h1>
+    <p class="subtitle">
+      Paste a YouTube video URL below. Our AI will analyze the lecture
+      and let you ask questions — answered instantly using the actual content.
+    </p>
+
+    <!-- Card -->
+    <div class="card">
+
+      <div class="field-label">
+        <span>①</span> Enter YouTube Video URL
+      </div>
+
+      <form id="url-form" action="/chat" method="GET" onsubmit="return handleSubmit(event)">
+        <div class="url-wrap">
+          <div class="yt-icon">▶</div>
+          <input
+            type="url"
+            id="yt-url"
+            name="url"
+            placeholder="https://www.youtube.com/watch?v=..."
+            autocomplete="off"
+            spellcheck="false"
+            required
+          />
+          <button type="submit" id="analyze-btn">
+            <span id="btn-label">Analyze</span>
+            <span class="btn-arrow" id="btn-arrow">→</span>
+          </button>
+        </div>
+      </form>
+
+      <div id="error-msg">⚠ Please enter a valid YouTube URL (youtube.com or youtu.be).</div>
+
+      <div class="divider">
+        <span>or try a sample</span>
+      </div>
+
+      <div class="samples-label">Sample lectures</div>
+      <div class="sample-chips">
+        <div class="chip" onclick="fillSample('https://www.youtube.com/watch?v=aircAruvnKk')">
+          <span class="chip-icon">🧠</span> Neural Networks
+        </div>
+        <div class="chip" onclick="fillSample('https://www.youtube.com/watch?v=kCc8FmEb1nY')">
+          <span class="chip-icon">🤖</span> Let's build GPT
+        </div>
+        <div class="chip" onclick="fillSample('https://www.youtube.com/watch?v=PACiB2GS3go')">
+          <span class="chip-icon">📊</span> Machine Learning Intro
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature strip -->
+    <div class="footer-strip">
+      <div class="feature-pill"><span class="icon">⚡</span> FAISS vector search</div>
+      <div class="feature-pill"><span class="icon">🎓</span> FLAN-T5 generation</div>
+      <div class="feature-pill"><span class="icon">🔒</span> Runs fully locally</div>
+    </div>
+
+  </div>
+
+  <script>
+    const urlInput    = document.getElementById('yt-url');
+    const analyzeBtn  = document.getElementById('analyze-btn');
+    const btnLabel    = document.getElementById('btn-label');
+    const btnArrow    = document.getElementById('btn-arrow');
+    const errorMsg    = document.getElementById('error-msg');
+
+    function isValidYouTubeUrl(url) {
+      try {
+        const u = new URL(url);
+        return (
+          u.hostname.includes('youtube.com') ||
+          u.hostname.includes('youtu.be')
+        );
+      } catch { return false; }
+    }
+
+    function fillSample(url) {
+      urlInput.value = url;
+      errorMsg.style.display = 'none';
+      urlInput.focus();
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      const val = urlInput.value.trim();
+
+      if (!isValidYouTubeUrl(val)) {
+        errorMsg.style.display = 'block';
+        urlInput.focus();
+        return false;
+      }
+
+      errorMsg.style.display = 'none';
+
+      // Show loading state
+      analyzeBtn.disabled = true;
+      btnLabel.textContent = 'Loading';
+      btnArrow.innerHTML = '<div class="spinner"></div>';
+
+      // Navigate to chat page with URL param
+      window.location.href = '/chat?url=' + encodeURIComponent(val);
+      return false;
+    }
+
+    // Hide error on input
+    urlInput.addEventListener('input', () => {
+      if (errorMsg.style.display === 'block') {
+        errorMsg.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
